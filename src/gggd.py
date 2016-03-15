@@ -139,7 +139,7 @@ class HTTPHeader(object):
 
 
 class GroupInformation(object):
-    def __init__(self, fetcher, group_name, organization=None):
+    def __init__(self, fetcher, group_name,  organization=None):
         self.fetcher = fetcher
         self.group_name = group_name
         self.org_path = "/a/%s" % organization if organization else ''
@@ -147,9 +147,9 @@ class GroupInformation(object):
         self.had_500 = False
         self.had_403 = False
 
-    def fetch(self, topic_page_limit=None):
+    def fetch(self, topic_limit, topic_page_limit=None):
         self.fetch_topics(topic_page_limit)
-        self.fetch_messages()
+        self.fetch_messages(topic_limit)
         self.fetch_content()
 
     def fetch_topics(self, page_limit=None):
@@ -171,22 +171,26 @@ class GroupInformation(object):
         global verbose
         next_page = None
         for line in data.splitlines():
-            parts = line.split()
-            # print parts
-            if len(parts) > 1 and parts[1].startswith("https://groups.google.com%s/d/topic/%s" % (self.org_path, self.group_name)):
-                t = parts[1].split("/")[-1]
-                self.topics[t] = {}
+		parts=line.split()
+		#print parts
+            	if len(parts) > 1 and parts[1].startswith("https://groups.google.com%s/d/topic/%s" % (self.org_path, self.group_name)):
+                	t = parts[1].split("/")[-1]
+                	self.topics[t] = {}
                 if verbose: print "Discovered %s" % parts[1]
-            elif len(parts) > 1 and parts[1].startswith("https://groups.google.com%s/forum/?_escaped_fragment_=forum/" % self.org_path):
-                next_page = parts[1]
+            	elif len(parts) > 1 and parts[1].startswith("https://groups.google.com%s/forum/?_escaped_fragment_=forum/" % self.org_path):
+                	next_page = parts[1]
                 if verbose: print "Next page is %s" % parts[1]
         return next_page
 
-    def fetch_messages(self):
+    def fetch_messages(self, topic_limit):
         global verbose
         if verbose: print "Fetching messages ..."
+	i=1
         for topic in self.topics.keys():
-            self.fetch_messages_topic(topic)
+		self.fetch_messages_topic(topic)
+		i=i+1
+		if i > topic_limit:
+			break
 
     def fetch_messages_topic(self, topic):
         global verbose
@@ -347,7 +351,7 @@ def main(argv=None): # IGNORE:C0111
         argv = sys.argv
     else:
         sys.argv.extend(argv)
-
+	
     program_name = os.path.basename(sys.argv[0])
     program_version = "v%s" % __version__
     program_build_date = str(__updated__)
@@ -369,6 +373,7 @@ USAGE
     try:
         # Setup argument parser
         parser = ArgumentParser(description=program_license, formatter_class=RawDescriptionHelpFormatter)
+	parser.add_argument("-r", "--limit", help="set limit to the topics to be downloaded", default=None, type=int)
         parser.add_argument("-v", "--verbose", action="count", help="set verbosity level [default: %(default)s]")
         parser.add_argument('-V', '--version', action='version', version=program_version_message)
         parser.add_argument("-t", "--topic-page-limit", help="Number of topic overview pages to process, usually at 20 topics per page", default=None, type=int)
@@ -437,7 +442,7 @@ USAGE
                 group_information.read_tree(read_contents=False)
                 group_information.fetch_update(args.update_count, replace_information=True)
             else:
-                group_information.fetch(args.topic_page_limit)
+                group_information.fetch(args.limit, args.topic_page_limit)
 
             group_information.write_tree(demangle=args.demangle)
 
