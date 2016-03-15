@@ -186,11 +186,15 @@ class GroupInformation(object):
         global verbose
         if verbose: print "Fetching messages ..."
 	i=1
-        for topic in self.topics.keys():
-		self.fetch_messages_topic(topic)
-		i=i+1
-		if i > topic_limit:
-			break
+	if topic_limit == None:
+		for topic in self.topics.keys():
+			self.fetch_messages_topic(topic)
+	else:
+        	for topic in self.topics.keys():
+			self.fetch_messages_topic(topic)
+			i=i+1
+			if i > topic_limit:
+				break
 
     def fetch_messages_topic(self, topic):
         global verbose
